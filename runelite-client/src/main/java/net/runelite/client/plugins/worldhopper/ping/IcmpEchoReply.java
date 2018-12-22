@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, Adam <Adam@sigterm.info>
+ * Copyright (c) 2018, Adam <Adam@sigterm.info>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,50 +22,39 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package net.runelite.cache.server;
+package net.runelite.client.plugins.worldhopper.ping;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-import net.runelite.protocol.update.decoders.ArchiveRequestDecoder;
-import net.runelite.protocol.update.decoders.EncryptionDecoder;
-import net.runelite.protocol.update.encoders.ArchiveResponseEncoder;
-import net.runelite.protocol.update.encoders.XorEncoder;
-import net.runelite.protocol.handshake.HandshakeDecoder;
-import net.runelite.protocol.handshake.HandshakeResponseEncoder;
+import com.sun.jna.Pointer;
+import com.sun.jna.Structure;
+import com.sun.jna.platform.win32.WinDef;
+import java.util.Arrays;
+import java.util.List;
 
-public class CacheServerInitializer extends ChannelInitializer<SocketChannel>
+public class IcmpEchoReply extends Structure
 {
-	private final CacheServer server;
+	private static final int IP_OPTION_INFO_SIZE = 1 + 1 + 1 + 1 + (Pointer.SIZE == 8 ? 12 : 4); // on 64bit vms add 4 byte padding
+	public static final int SIZE = 4 + 4 + 4 + 2 + 2 + Pointer.SIZE + IP_OPTION_INFO_SIZE;
 
-	public CacheServerInitializer(CacheServer server)
+	public WinDef.ULONG address;
+	public WinDef.ULONG status;
+	public WinDef.ULONG roundTripTime;
+	public WinDef.USHORT dataSize;
+	public WinDef.USHORT reserved;
+	public WinDef.PVOID data;
+	public WinDef.UCHAR ttl;
+	public WinDef.UCHAR tos;
+	public WinDef.UCHAR flags;
+	public WinDef.UCHAR optionsSize;
+	public WinDef.PVOID optionsData;
+
+	IcmpEchoReply(Pointer p)
 	{
-		this.server = server;
+		super(p);
 	}
 
 	@Override
-	protected void initChannel(SocketChannel ch) throws Exception
+	protected List<String> getFieldOrder()
 	{
-		ChannelPipeline p = ch.pipeline();
-
-		p.addLast(
-			new HandshakeDecoder(),
-			new CacheFrameDecoder(),
-			new EncryptionDecoder(),
-			new ArchiveRequestDecoder()
-		);
-
-		p.addLast(
-			new HandshakeResponseEncoder(),
-			new XorEncoder(),
-			new ArchiveResponseEncoder()
-		);
-
-		p.addLast(
-			new ArchiveRequestHandler(server.getStore()),
-			new EncryptionHandler(),
-			new HandshakeHandler(server)
-		);
+		return Arrays.asList("address", "status", "roundTripTime", "dataSize", "reserved", "data", "ttl", "tos", "flags", "optionsSize", "optionsData");
 	}
-
 }
